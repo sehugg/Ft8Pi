@@ -336,6 +336,12 @@ void txon() {
   // Enable clock.
   setupword = {6/*SRC*/, 1, 0, 0, 0, 3,0x5a};
   ACCESS_BUS_ADDR(CM_GP0CTL_BUS) = *((int*)&setupword);
+
+  // setup LED for output (GPIO 18)
+  CLRBIT_BUS_ADDR(GPIO_BUS_BASE+4, 26);
+  CLRBIT_BUS_ADDR(GPIO_BUS_BASE+4, 25);
+  SETBIT_BUS_ADDR(GPIO_BUS_BASE+4, 24);
+  SETBIT_BUS_ADDR(GPIO_BUS_BASE+0x1c, 18);
 }
 
 // Turn transmitter on
@@ -343,6 +349,11 @@ void txoff() {
   //struct GPCTL setupword = {6/*SRC*/, 0, 0, 0, 0, 1,0x5a};
   //ACCESS_BUS_ADDR(CM_GP0CTL_BUS) = *((int*)&setupword);
   disable_clock();
+  // turn off LED
+  CLRBIT_BUS_ADDR(GPIO_BUS_BASE+4, 26);
+  CLRBIT_BUS_ADDR(GPIO_BUS_BASE+4, 25);
+  CLRBIT_BUS_ADDR(GPIO_BUS_BASE+4, 24);
+  CLRBIT_BUS_ADDR(GPIO_BUS_BASE+0x1c, 18);
 }
 
 // Transmit symbol sym for tsym seconds.
