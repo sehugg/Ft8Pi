@@ -45,6 +45,9 @@
 #include <pthread.h>
 #include <sys/timex.h>
 
+#include "pack.h"
+#include "encode.h"
+
 #ifdef __cplusplus
 extern "C" {
 #include "mailbox.h"
@@ -380,7 +383,7 @@ void txSym(
   const double f0_freq=dma_table_freq[f0_idx];
   const double f1_freq=dma_table_freq[f1_idx];
   const double tone_freq=center_freq-1.5*tone_spacing+sym_num*tone_spacing;
-  printf("%d %f %f %f %f %f\n", f0_idx, f0_freq, f1_freq, center_freq, tone_spacing, tone_freq);
+  //printf("%d %f %f %f %f %f\n", f0_idx, f0_freq, f1_freq, center_freq, tone_spacing, tone_freq);
   // Double check...
   assert((tone_freq>=f0_freq));
   assert((tone_freq<=f1_freq));
@@ -601,7 +604,7 @@ void to_upper(
 }
 
 // Encode call, locator, and dBm into FT8 codeblock.
-void ft8(
+void ft8gen(
   const char* call,
   const char* l_pre,
   const char* dbm,
@@ -731,7 +734,7 @@ void wait_every_15_sec(
 
 void print_usage() {
   std::cout << "Usage:" << std::endl;
-  std::cout << "  ft8 [options] callsign locator tx_pwr_dBm f1 <f2> <f3> ..." << std::endl;
+  std::cout << "  ft8 [options] message f1 <f2> <f3> ..." << std::endl;
   std::cout << "    OR" << std::endl;
   std::cout << "  ft8 [options] --test-tone f" << std::endl;
   std::cout << std::endl;
@@ -774,9 +777,7 @@ void parse_commandline(
   const int & argc,
   char * const argv[],
   // Outputs
-  std::string & callsign,
-  std::string & locator,
-  std::string & tx_power,
+  std::string & message,
   std::vector <double> & center_freq_set,
   double & ppm,
   bool & self_cal,
@@ -885,17 +886,7 @@ void parse_commandline(
   while (optind<argc) {
     // Check for callsign, locator, tx_power
     if (n_free_args==0) {
-      callsign=argv[optind++];
-      n_free_args++;
-      continue;
-    }
-    if (n_free_args==1) {
-      locator=argv[optind++];
-      n_free_args++;
-      continue;
-    }
-    if (n_free_args==2) {
-      tx_power=argv[optind++];
+      message=argv[optind++];
       n_free_args++;
       continue;
     }
@@ -952,8 +943,7 @@ void parse_commandline(
   }
 
   // Convert to uppercase
-  transform(callsign.begin(),callsign.end(),callsign.begin(),::toupper);
-  transform(locator.begin(),locator.end(),locator.begin(),::toupper);
+  transform(message.begin(),message.end(),message.begin(),::toupper);
 
   // Check consistency among command line options.
   if (ppm&&self_cal) {
@@ -961,8 +951,8 @@ void parse_commandline(
     ppm=0.0;
   }
   if (mode==TONE) {
-    if ((callsign!="")||(locator!="")||(tx_power!="")||(center_freq_set.size()!=0)||random_offset) {
-      std::cerr << "Warning: callsign, locator, etc. are ignored when generating test tone" << std::endl;
+    if ((message!="")||random_offset) {
+      std::cerr << "Warning: message ignored when generating test tone" << std::endl;
     }
     random_offset=0;
     if (test_tone<=0) {
@@ -970,8 +960,8 @@ void parse_commandline(
       ABORT(-1);
     }
   } else {
-    if ((callsign=="")||(locator=="")||(tx_power=="")||(center_freq_set.size()==0)) {
-      std::cerr << "Error: must specify callsign, locator, dBm, and at least one frequency" << std::endl;
+    if ((message=="")||(center_freq_set.size()==0)) {
+      std::cerr << "Error: must specify message and at least one frequency" << std::endl;
       std::cerr << "Try: ft8 --help" << std::endl;
       ABORT(-1);
     }
@@ -980,9 +970,7 @@ void parse_commandline(
   // Print a summary of the parsed options
   if (mode==FT8) {
     std::cout << "FT8 packet contents:" << std::endl;
-    std::cout << "  Callsign: " << callsign << std::endl;
-    std::cout << "  Locator:  " << locator << std::endl;
-    std::cout << "  Power:    " << tx_power << " dBm" << std::endl;
+    std::cout << "  Callsign: " << message << std::endl;
     std::cout << "Requested TX frequencies:" << std::endl;
     std::stringstream temp;
     for (unsigned int t=0;t<center_freq_set.size();t++) {
@@ -1158,9 +1146,7 @@ int main(const int argc, char * const argv[]) {
   srand(time(NULL));
 
   // Parse arguments
-  std::string callsign;
-  std::string locator;
-  std::string tx_power;
+  std::string message;
   std::vector <double> center_freq_set;
   double ppm;
   bool self_cal;
@@ -1173,9 +1159,7 @@ int main(const int argc, char * const argv[]) {
   parse_commandline(
     argc,
     argv,
-    callsign,
-    locator,
-    tx_power,
+    message,
     center_freq_set,
     ppm,
     self_cal,
@@ -1203,6 +1187,7 @@ int main(const int argc, char * const argv[]) {
     // Test tone mode...
     double ft8_symtime = FT8_SYMTIME;
     double tone_spacing=1.0/ft8_symtime;
+    std::cout << "Tone Spacing: " << tone_spacing << " Hz" << std::endl;
 
     std::stringstream temp;
     temp << std::setprecision(6) << std::fixed << "Transmitting test tone on frequency " << test_tone/1.0e6 << " MHz" << std::endl;
@@ -1243,8 +1228,10 @@ int main(const int argc, char * const argv[]) {
 
     // Create FT8 symbols
     unsigned char symbols[NSYM];
-    ft8(callsign.c_str(), locator.c_str(), tx_power.c_str(), symbols);
-    /*
+    unsigned char c77[10];
+    ft8::pack77(message.c_str(), c77);
+    ft8::genft8(c77, symbols);
+
     printf("FT8 codeblock: ");
     for (int i = 0; i < (signed)(sizeof(symbols)/sizeof(*symbols)); i++) {
       if (i) {
@@ -1253,7 +1240,6 @@ int main(const int argc, char * const argv[]) {
       printf("%d", symbols[i]);
     }
     printf("\n");
-    */
 
     std::cout << "Ready to transmit (setup complete)..." << std::endl;
     int band=0;
