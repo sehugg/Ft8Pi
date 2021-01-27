@@ -13,26 +13,26 @@ else
 PI_VERSION = -DRPI23
 endif
 
-all: wspr gpioclk
+all: ft8 gpioclk
 
 mailbox.o: mailbox.c mailbox.h
 	$(CC) $(CFLAGS) -c mailbox.c
 
-wspr: mailbox.o wspr.cpp mailbox.h
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(PI_VERSION) mailbox.o wspr.cpp -owspr
+ft8: mailbox.o ft8.cpp mailbox.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(PI_VERSION) mailbox.o ft8.cpp -oft8
 
 gpioclk: gpioclk.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(PI_VERSION) gpioclk.cpp -ogpioclk
 
 clean:
-	$(RM) *.o gpioclk wspr
+	$(RM) *.o gpioclk ft8
 
 .PHONY: install
-install: wspr
-	install -m 0755 wspr $(prefix)/bin
+install: ft8
+	install -m 0755 ft8 $(prefix)/bin
 	install -m 0755 gpioclk $(prefix)/bin
 
 .PHONY: uninstall
 uninstall:
-	$(RM) $(prefix)/bin/wspr $(prefix)/bin/gpioclk
+	$(RM) $(prefix)/bin/ft8 $(prefix)/bin/gpioclk
 

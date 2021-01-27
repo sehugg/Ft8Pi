@@ -1,4 +1,4 @@
-// WSPR transmitter for the Raspberry Pi. See accompanying README
+// FT8 transmitter for the Raspberry Pi. See accompanying README
 // file for a description on how to use this code.
 
 // License:
@@ -119,18 +119,20 @@ extern "C" {
 #error "RPI version macro is not defined"
 #endif
 #endif
-// Empirical value for F_PWM_CLK that produces WSPR symbols that are 'close' to
-// 0.682s long. For some reason, despite the use of DMA, the load on the PI
+// Empirical value for F_PWM_CLK that produces FT8 symbols that are 'close' to
+// 0.16s long. For some reason, despite the use of DMA, the load on the PI
 // affects the TX length of the symbols. However, the varying symbol length is
 // compensated for in the main loop.
-#define F_PWM_CLK_INIT (31156186.6125761)
+#define F_PWM_CLK_INIT (31156186.6125761*0.682/0.16) // TODO?
 
-// WSRP nominal symbol time
-#define WSPR_SYMTIME (8192.0/12000.0)
-// How much random frequency offset should be added to WSPR transmissions
+// FT8 nominal symbol time
+#define FT8_SYMTIME (1920.0/12000.0)
+// How much random frequency offset should be added to FT8 transmissions
 // if the --offset option has been turned on.
-#define WSPR_RAND_OFFSET 80
-#define WSPR15_RAND_OFFSET 8
+#define FT8_RAND_OFFSET 80
+#define FT815_RAND_OFFSET 8
+
+#define NSYM 79
 
 // Choose proper base address depending on RPI1/RPI23 macro from makefile.
 // PERI_BASE_PHYS is the base address of the peripherals, in physical
@@ -141,7 +143,7 @@ extern "C" {
 #else
 #ifdef RPI1
 #define PERI_BASE_PHYS 0x20000000
-#define MEM_FLAG 0x0c
+#define MEM_FLAG 0x0ca
 #else
 #error "RPI version macro is not defined"
 #endif
@@ -180,7 +182,7 @@ volatile unsigned *peri_base_virt = NULL;
 // Convert from a bus address to a physical address.
 #define BUS_TO_PHYS(x) ((x)&~0xC0000000)
 
-typedef enum {WSPR,TONE} mode_type;
+typedef enum {FT8,TONE} mode_type;
 
 // Structure used to control clock generator
 struct GPCTL {
@@ -359,7 +361,7 @@ void txoff() {
 // Transmit symbol sym for tsym seconds.
 //
 // TODO:
-// Upon entering this function at the beginning of a WSPR transmission, we
+// Upon entering this function at the beginning of a FT8 transmission, we
 // do not know which DMA table entry is being processed by the DMA engine.
 #define PWM_CLOCKS_PER_ITER_NOMINAL 1000
 void txSym(
@@ -378,8 +380,10 @@ void txSym(
   const double f0_freq=dma_table_freq[f0_idx];
   const double f1_freq=dma_table_freq[f1_idx];
   const double tone_freq=center_freq-1.5*tone_spacing+sym_num*tone_spacing;
+  printf("%d %f %f %f %f %f\n", f0_idx, f0_freq, f1_freq, center_freq, tone_spacing, tone_freq);
   // Double check...
-  assert((tone_freq>=f0_freq)&&(tone_freq<=f1_freq));
+  assert((tone_freq>=f0_freq));
+  assert((tone_freq<=f1_freq));
   const double f0_ratio=1.0-(tone_freq-f0_freq)/(f1_freq-f0_freq);
   //cout << "f0_ratio = " << f0_ratio << std::endl;
   assert ((f0_ratio>=0)&&(f0_ratio<=1));
@@ -461,7 +465,7 @@ void setupDMATab(
   double & center_freq_actual,
   struct PageInfo & constPage
 ){
-  // Make sure that all the WSPR tones can be produced solely by
+  // Make sure that all the FT8 tones can be produced solely by
   // varying the fractional part of the frequency divider.
   center_freq_actual=center_freq_desired;
   double div_lo=bit_trunc(plld_actual_freq/(center_freq_desired-1.5*tone_spacing),-12)+pow(2.0,-12);
@@ -474,11 +478,11 @@ void setupDMATab(
     std::cout << "  because of hardware limitations!" << std::endl;
   }
 
-  // Create DMA table of tuning words. WSPR tone i will use entries 2*i and
+  // Create DMA table of tuning words. FT8 tone i will use entries 2*i and
   // 2*i+1 to generate the appropriate tone.
   double tone0_freq=center_freq_actual-1.5*tone_spacing;
   std::vector <long int> tuning_word(1024);
-  for (int i=0;i<8;i++) {
+  for (int i=0;i<16;i++) {
     double tone_freq=tone0_freq+(i>>1)*tone_spacing;
     double div=bit_trunc(plld_actual_freq/tone_freq,-12);
     if (i%2==0) {
@@ -487,7 +491,7 @@ void setupDMATab(
     tuning_word[i]=((int)(div*pow(2.0,12)));
   }
   // Fill the remaining table, just in case...
-  for (int i=8;i<1024;i++) {
+  for (int i=16;i<1024;i++) {
     double div=500+i;
     tuning_word[i]=((int)(div*pow(2.0,12)));
   }
@@ -497,7 +501,7 @@ void setupDMATab(
   for (int i=0;i<1024;i++) {
     dma_table_freq[i]=plld_actual_freq/(tuning_word[i]/pow(2.0,12));
     ((int*)(constPage.v))[i] = (0x5a<<24)+tuning_word[i];
-    if ((i%2==0)&&(i<8)) {
+    if ((i%2==0)&&(i<16)) {
       assert((tuning_word[i]&(~0xfff))==(tuning_word[i+1]&(~0xfff)));
     }
   }
@@ -596,8 +600,8 @@ void to_upper(
   }
 }
 
-// Encode call, locator, and dBm into WSPR codeblock.
-void wspr(
+// Encode call, locator, and dBm into FT8 codeblock.
+void ft8(
   const char* call,
   const char* l_pre,
   const char* dbm,
@@ -695,30 +699,31 @@ void wspr(
      0,0,1,0,0,0,0,0,1,0,0,1,0,0,1,1,1,0,1,1,0,0,1,1,0,1,0,0,0,1,1,1,
      0,0,0,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,1,1,0,1,0,1,1,0,0,0,1,1,0,
      0,0 };
-  for(i=0;i!=162;i++){
+  for(i=0;i!=NSYM;i++){
      // j0 := bit reversed_values_smaller_than_161[i]
      unsigned char j0;
      p=-1;
      for(k=0;p!=i;k++){
         for(j=0;j!=8;j++)   // j0:=bit_reverse(k)
           j0 = ((k>>j)&1)|(j0<<1);
-        if(j0<162)
+        if(j0<NSYM)
           p++;
      }
      symbols[j0]=npr3[j0]|symbol[i]<<1; //interleave and add sync std::vector
   }
 }
 
-// Wait for the system clock's minute to reach one second past 'minute'
-void wait_every(
-  int minute
+void wait_every_15_sec(
 ) {
   time_t t;
   struct tm* ptm;
   for(;;){
     time(&t);
     ptm = gmtime(&t);
-    if((ptm->tm_min % minute) == 0 && ptm->tm_sec == 0) break;
+    if(ptm->tm_sec == 0) break;
+    if(ptm->tm_sec == 15) break;
+    if(ptm->tm_sec == 30) break;
+    if(ptm->tm_sec == 45) break;
     usleep(1000);
   }
   usleep(1000000); // wait another second
@@ -726,9 +731,9 @@ void wait_every(
 
 void print_usage() {
   std::cout << "Usage:" << std::endl;
-  std::cout << "  wspr [options] callsign locator tx_pwr_dBm f1 <f2> <f3> ..." << std::endl;
+  std::cout << "  ft8 [options] callsign locator tx_pwr_dBm f1 <f2> <f3> ..." << std::endl;
   std::cout << "    OR" << std::endl;
-  std::cout << "  wspr [options] --test-tone f" << std::endl;
+  std::cout << "  ft8 [options] --test-tone f" << std::endl;
   std::cout << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  -h --help" << std::endl;
@@ -746,20 +751,20 @@ void print_usage() {
   std::cout << "    Terminate after n transmissions have been completed." << std::endl;
   std::cout << "  -o --offset" << std::endl;
   std::cout << "    Add a random frequency offset to each transmission:" << std::endl;
-  std::cout << "      +/- " << WSPR_RAND_OFFSET << " Hz for WSPR" << std::endl;
-  std::cout << "      +/- " << WSPR15_RAND_OFFSET << " Hz for WSPR-15" << std::endl;
+  std::cout << "      +/- " << FT8_RAND_OFFSET << " Hz for FT8" << std::endl;
+  std::cout << "      +/- " << FT815_RAND_OFFSET << " Hz for FT8-15" << std::endl;
   std::cout << "  -t --test-tone freq" << std::endl;
   std::cout << "    Simply output a test tone at the specified frequency. Only used" << std::endl;
   std::cout << "    for debugging and to verify calibration." << std::endl;
   std::cout << "  -n --no-delay" << std::endl;
-  std::cout << "    Transmit immediately, do not wait for a WSPR TX window. Used" << std::endl;
+  std::cout << "    Transmit immediately, do not wait for a FT8 TX window. Used" << std::endl;
   std::cout << "    for testing only." << std::endl;
   std::cout << std::endl;
   std::cout << "Frequencies can be specified either as an absolute TX carrier frequency, or" << std::endl;
   std::cout << "using one of the following strings. If a string is used, the transmission" << std::endl;
-  std::cout << "will happen in the middle of the WSPR region of the selected band." << std::endl;
+  std::cout << "will happen in the middle of the FT8 region of the selected band." << std::endl;
   std::cout << "  LF LF-15 MF MF-15 160m 160m-15 80m 60m 40m 30m 20m 17m 15m 12m 10m 6m 4m 2m" << std::endl;
-  std::cout << "<B>-15 indicates the WSPR-15 region of band <B>." << std::endl;
+  std::cout << "<B>-15 indicates the FT8-15 region of band <B>." << std::endl;
   std::cout << std::endl;
   std::cout << "Transmission gaps can be created by specifying a TX frequency of 0" << std::endl;
 }
@@ -789,7 +794,7 @@ void parse_commandline(
   random_offset=false;
   test_tone=NAN;
   no_delay=false;
-  mode=WSPR;
+  mode=FT8;
   terminate=-1;
 
   static struct option long_options[] = {
@@ -967,14 +972,14 @@ void parse_commandline(
   } else {
     if ((callsign=="")||(locator=="")||(tx_power=="")||(center_freq_set.size()==0)) {
       std::cerr << "Error: must specify callsign, locator, dBm, and at least one frequency" << std::endl;
-      std::cerr << "Try: wspr --help" << std::endl;
+      std::cerr << "Try: ft8 --help" << std::endl;
       ABORT(-1);
     }
   }
 
   // Print a summary of the parsed options
-  if (mode==WSPR) {
-    std::cout << "WSPR packet contents:" << std::endl;
+  if (mode==FT8) {
+    std::cout << "FT8 packet contents:" << std::endl;
     std::cout << "  Callsign: " << callsign << std::endl;
     std::cout << "  Locator:  " << locator << std::endl;
     std::cout << "  Power:    " << tx_power << " dBm" << std::endl;
@@ -1196,8 +1201,8 @@ int main(const int argc, char * const argv[]) {
 
   if (mode==TONE) {
     // Test tone mode...
-    double wspr_symtime = WSPR_SYMTIME;
-    double tone_spacing=1.0/wspr_symtime;
+    double ft8_symtime = FT8_SYMTIME;
+    double tone_spacing=1.0/ft8_symtime;
 
     std::stringstream temp;
     temp << std::setprecision(6) << std::fixed << "Transmitting test tone on frequency " << test_tone/1.0e6 << " MHz" << std::endl;
@@ -1234,13 +1239,13 @@ int main(const int argc, char * const argv[]) {
     // Should never get here...
 
   } else {
-    // WSPR mode
+    // FT8 mode
 
-    // Create WSPR symbols
-    unsigned char symbols[162];
-    wspr(callsign.c_str(), locator.c_str(), tx_power.c_str(), symbols);
+    // Create FT8 symbols
+    unsigned char symbols[NSYM];
+    ft8(callsign.c_str(), locator.c_str(), tx_power.c_str(), symbols);
     /*
-    printf("WSPR codeblock: ");
+    printf("FT8 codeblock: ");
     for (int i = 0; i < (signed)(sizeof(symbols)/sizeof(*symbols)); i++) {
       if (i) {
         std::cout << ",";
@@ -1254,33 +1259,29 @@ int main(const int argc, char * const argv[]) {
     int band=0;
     int n_tx=0;
     for(;;) {
-      // Calculate WSPR parameters for this transmission
+      // Calculate FT8 parameters for this transmission
       double center_freq_desired;
       center_freq_desired = center_freq_set[band];
-      bool wspr15 =
-           (center_freq_desired > 137600 && center_freq_desired < 137625) || \
-           (center_freq_desired > 475800 && center_freq_desired < 475825) || \
-           (center_freq_desired > 1838200 && center_freq_desired < 1838225);
-      double wspr_symtime = (wspr15) ? 8.0 * WSPR_SYMTIME : WSPR_SYMTIME;
-      double tone_spacing=1.0/wspr_symtime;
+      double ft8_symtime = FT8_SYMTIME;
+      double tone_spacing=1.0/ft8_symtime;
 
       // Add random offset
       if ((center_freq_desired!=0)&&random_offset) {
-        center_freq_desired+=(2.0*rand()/((double)RAND_MAX+1.0)-1.0)*(wspr15?WSPR15_RAND_OFFSET:WSPR_RAND_OFFSET);
+        center_freq_desired+=(2.0*rand()/((double)RAND_MAX+1.0)-1.0)*(FT8_RAND_OFFSET);
       }
 
       // Status message before transmission
       std::stringstream temp;
       temp << std::setprecision(6) << std::fixed;
-      temp << "Desired center frequency for " << (wspr15?"WSPR-15":"WSPR") << " transmission: "<< center_freq_desired/1e6 << " MHz" << std::endl;
+      temp << "Desired center frequency for FT8 transmission: "<< center_freq_desired/1e6 << " MHz" << std::endl;
       std::cout << temp.str();
 
-      // Wait for WSPR transmission window to arrive.
+      // Wait for FT8 transmission window to arrive.
       if (no_delay) {
-        std::cout << "  Transmitting immediately (not waiting for WSPR window)" << std::endl;
+        std::cout << "  Transmitting immediately (not waiting for FT8 window)" << std::endl;
       } else {
-        std::cout << "  Waiting for next WSPR transmission window..." << std::endl;
-        wait_every((wspr15) ? 15 : 2);
+        std::cout << "  Waiting for next FT8 transmission window..." << std::endl;
+        wait_every_15_sec();
       }
 
       // Update crystal calibration information
@@ -1311,17 +1312,17 @@ int main(const int argc, char * const argv[]) {
         struct timeval diff;
         int bufPtr=0;
         txon();
-        for (int i = 0; i < 162; i++) {
+        for (int i = 0; i < NSYM; i++) {
           gettimeofday(&sym_start,NULL);
           timeval_subtract(&diff, &sym_start, &tvBegin);
           double elapsed=diff.tv_sec+diff.tv_usec/1e6;
-          //elapsed=(i)*wspr_symtime;
-          double sched_end=(i+1)*wspr_symtime;
-          //cout << "symbol " << i << " " << wspr_symtime << std::endl;
+          //elapsed=(i)*ft8_symtime;
+          double sched_end=(i+1)*ft8_symtime;
+          //cout << "symbol " << i << " " << ft8_symtime << std::endl;
           //cout << sched_end-elapsed << std::endl;
           double this_sym=sched_end-elapsed;
           this_sym=(this_sym<.2)?.2:this_sym;
-          this_sym=(this_sym>2*wspr_symtime)?2*wspr_symtime:this_sym;
+          this_sym=(this_sym>2*ft8_symtime)?2*ft8_symtime:this_sym;
           txSym(symbols[i], center_freq_actual, tone_spacing, sched_end-elapsed, dma_table_freq, F_PWM_CLK_INIT, instrs, constPage, bufPtr);
         }
         n_tx++;
