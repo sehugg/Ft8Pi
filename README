@@ -177,11 +177,14 @@ Example usage:
   Transmit a constant test tone at 780 kHz.
     sudo ./ft8 --test-tone 780e3
 
-  Call CQ for callsign N9NNN at grid square EM10 on the 20m band:
-    sudo ./wspr 20m CQ N9NNN EM10
+  Call CQ for callsign N9NNN at grid square EM10 on the 20m band with a
+  random frequency offset:
+    sudo ./wspr 20m CQ N9NNN EM10 -o
 
-  Reply to N9NNN with callsign Z3ZZ and signal report:
-    sudo ./wspr 20m N9NNN Z3ZZ -12
+  Reply to N9NNN with callsign Z3ZZ and signal report: (escape leading "-")
+    sudo ./wspr 20m -- N9NNN Z3ZZ -12
+      OR
+    sudo ./wspr 20m "N9NNN Z3ZZ -12"
 
 ******
 Reference documentation:
@@ -195,7 +198,8 @@ Reference documentation:
 ******
 Credits:
 ******
-  This code is based on WsprryPi, a WSPR transmitter, adapted to FT8 [5].
+  This code is based on WsprryPi [4] and adapted to FT8 by
+  KO4KOP using the ft8_lib library [5].
 
   Credits goes to Oliver Mattos and Oskar Weigl who implemented PiFM [1]
   based on the idea of exploiting RPi DPLL as FM transmitter.
@@ -228,7 +232,7 @@ Credits:
       https://github.com/DanAnkers/WsprryPi
   [3] Fork created by Guido:
       https://github.com/threeme3/WsprryPi
-  [4] This code derived from this fork:
+  [4] WsprryPi, a WSPR transmitter:
       https://github.com/JamesP6000/WsprryPi
   [5] Uses FT8 library code from Kārlis Goba:
       https://github.com/kgoba/ft8_lib
