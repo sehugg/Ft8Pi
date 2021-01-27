@@ -1,27 +1,19 @@
-Raspberry Pi bareback LF/MF/HF/VHF WSPR transmitter
+Raspberry Pi bareback LF/MF/HF/VHF FT8 transmitter
 
-Makes a very simple WSPR beacon from your RasberryPi by connecting GPIO
+Makes a very simple FT8 tx from your RasberryPi by connecting GPIO
 port to Antenna (and LPF), operates on LF, MF, HF and VHF bands from
 0 to 250 MHz.
 
 Compatible with the original Raspberry Pi, the Raspberry Pi 2/3, and
 the Pi Zero.
 
-!!!!!!
-2017-04-21
-Do note that some users have been reporting lockups with recent OS versions.
-I have not been able to reproduce the problems on my RPI1 and RPI3 running
-the latest Jessie-Lite.
-https://github.com/JamesP6000/WsprryPi/issues/6#issuecomment-296233932
-!!!!!!
-
 ******
 Installation / update:
 ******
   Download and compile code:
     sudo apt-get install git
-    git clone https://github.com/JamesP6000/WsprryPi.git
-    cd WsprryPi
+    git clone https://github.com/sehugg/Ft8Pi
+    cd Ft8Pi
     make
 
   Install to /usr/local/bin:
@@ -31,7 +23,7 @@ Installation / update:
     sudo make uninstall
 
 ******
-Usage: (WSPR --help output):
+Usage: (ft8 --help output):
 ******
 
   If running from the console, recent versions of Jessie cause WsprryPi to
@@ -41,7 +33,7 @@ Usage: (WSPR --help output):
   https://github.com/JamesP6000/WsprryPi/issues/10
 
   Usage:
-    wspr [options] callsign locator tx_pwr_dBm f1 <f2> <f3> ...
+    wspr [options] message f1 <f2> <f3> ...
       OR
     wspr [options] --test-tone f
 
@@ -62,27 +54,20 @@ Usage: (WSPR --help output):
       Terminate after n transmissions have been completed.
     -o --offset
       Add a random frequency offset to each transmission:
-        +/- 80 Hz for WSPR
-        +/- 8 Hz for WSPR-15
+        +/- 80 Hz
     -t --test-tone freq
       Simply output a test tone at the specified frequency. Only used
       for debugging and to verify calibration.
     -n --no-delay
-      Transmit immediately, do not wait for a WSPR TX window. Used
+      Transmit immediately, do not wait for a TX window. Used
       for testing only.
 
   Frequencies can be specified either as an absolute TX carrier frequency, or
   using one of the following strings. If a string is used, the transmission
-  will happen in the middle of the WSPR region of the selected band.
-    LF LF-15 MF MF-15 160m 160m-15 80m 60m 40m 30m 20m 17m 15m 12m 10m 6m 4m 2m
-  <B>-15 indicates the WSPR-15 region of band <B>.
+  will happen in the middle of the region of the selected band.
+    160m 80m 60m 40m 30m 20m 17m 15m 12m 10m 6m 4m 2m
 
   Transmission gaps can be created by specifying a TX frequency of 0
-
-  Note that 'callsign', 'locator', and 'tx_power_dBm' are simply used to fill
-  in the appropriate fields of the WSPR message. Normally, tx_power_dBm should
-  be 10, representing the signal power coming out of the Pi. Set this value
-  appropriately if you are using an external amplifier.
 
 ******
 Radio licensing / RF:
@@ -128,14 +113,12 @@ Radio licensing / RF:
 ******
 TX Timing:
 ******
-  This software is using system time to determine the start of WSPR
+  This software is using system time to determine the start of
   transmissions, so keep the system time synchronised within 1sec precision,
   i.e. use NTP network time synchronisation or set time manually with date
-  command. A WSPR broadcast starts on an even minute and takes 2 minutes for
-  WSPR-2 or starts at :00,:15,:30,:45 and takes 15 minutes for WSPR-15. It
-  contains a callsign, 4-digit Maidenhead square locator and transmission
-  power.  Reception reports can be viewed on Weak Signal Propagation Reporter
-  Network at: http://wsprnet.org/drupal/wsprnet/spots
+  command. A broadcast takes 15 seconds and starts at :00,:15,:30,:45.
+  
+  Reception reports can be viewed on https://pskreporter.info/
 
 ******
 Calibration:
@@ -144,8 +127,8 @@ Calibration:
   frequency error of about 0.1 PPM after the Pi has temperature stabilized
   and the NTP loop has converged.
 
-  Frequency calibration is REQUIRED to ensure that the WSPR-2 transmission
-  occurs within the narrow 200 Hz band. The reference crystal on your RPi might
+  Frequency calibration is REQUIRED to ensure that the transmission
+  occurs within the narrow band. The reference crystal on your RPi might
   have an frequency error (which in addition is temp. dependent -1.3Hz/degC
   @10MHz). To calibrate, the frequency might be manually corrected on the
   command line or a PPM correction could be specified on the command line.
@@ -154,7 +137,7 @@ Calibration:
   NTP automatically tracks and calculates a PPM frequency correction. If you
   are running NTP on your Pi, you can use the --self-calibration option to
   have this program querry NTP for the latest frequency correction before
-  each WSPR transmission. Some residual frequency error may still be present
+  each transmission. Some residual frequency error may still be present
   due to delays in the NTP measurement loop and this method works best if your
   Pi has been on for a long time, the crystal's temperature has stabilized,
   and the NTP control loop has converged.
@@ -165,7 +148,7 @@ Calibration:
   constant audio tone disappears when the transmitter is exactly on the same
   frequency as the broadcast station), and determine the frequency difference
   with the broadcast station. This is the frequency error that can be applied
-  for correction while tuning on a WSPR frequency.
+  for correction while tuning on a frequency.
 
   Suppose your local AM radio station is at 780kHz. Use the --test-tone option
   to produce different tones around 780kHz (eg 780100 Hz) until you can
@@ -181,35 +164,24 @@ PWM Peripheral:
 ******
   The code uses the RPi PWM peripheral to time the frequency transitions
   of the output clock. This peripheral is also used by the RPi sound system
-  and hence any sound events that occur during a WSPR transmission will
-  interfere with WSPR transmissions. Sound can be permanently disabled
+  and hence any sound events that occur during a transmission will
+  interfere with transmissions. Sound can be permanently disabled
   by editing /etc/modules and commenting out the snd-bcm2835 device.
 
 ******
 Example usage:
 ******
   Brief help screen
-    ./wspr --help
+    ./ft8 --help
 
   Transmit a constant test tone at 780 kHz.
-    sudo ./wspr --test-tone 780e3
+    sudo ./ft8 --test-tone 780e3
 
-  Using callsign N9NNN, locator EM10, and TX power 33 dBm, transmit a single
-  WSPR transmission on the 20m band using NTP based frequency offset
-  calibration.
-    sudo ./wspr N9NNN EM10 33 20m
+  Call CQ for callsign N9NNN at grid square EM10 on the 20m band:
+    sudo ./wspr "CQ N9NNN EM10" 20m
 
   The same as above, but without NTP calibration:
-    sudo ./wspr --free-running N9NNN EM10 33 20m
-
-  Transmit a WSPR transmission slightly off-center on 30m every 10 minutes for
-  a total of 7 transmissions, and using a fixed PPM correction value.
-    sudo ./wspr --repeat --terminate 7 --ppm 43.17 N9NNN EM10 33 10140210 0 0 0 0
-
-  Transmit repeatedly on 40m, use NTP based frequency offset calibration,
-  and add a random frequency offset to each transmission to minimize collisions
-  with other transmitters.
-    sudo ./wspr --repeat --offset --self-calibration N9NNN EM10 33 40m
+    sudo ./wspr --free-running "CQ N9NNN EM10" 20m
 
 ******
 Reference documentation:
@@ -223,6 +195,8 @@ Reference documentation:
 ******
 Credits:
 ******
+  This code is based on WsprryPi, a WSPR transmitter, adapted to FT8 [5].
+
   Credits goes to Oliver Mattos and Oskar Weigl who implemented PiFM [1]
   based on the idea of exploiting RPi DPLL as FM transmitter.
 
@@ -254,6 +228,7 @@ Credits:
       https://github.com/DanAnkers/WsprryPi
   [3] Fork created by Guido:
       https://github.com/threeme3/WsprryPi
-  [4] This fork created by James:
+  [4] This code derived from this fork:
       https://github.com/JamesP6000/WsprryPi
-
+  [5] Uses FT8 library code from Kārlis Goba:
+      https://github.com/kgoba/ft8_lib
