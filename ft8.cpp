@@ -132,7 +132,9 @@ extern "C" {
 #define FT8_SYMTIME (1920.0/12000.0)
 // How much random frequency offset should be added to FT8 transmissions
 // if the --offset option has been turned on.
-#define FT8_RAND_OFFSET 80
+#define FT8_RAND_OFFSET 1000
+// offset from dial frequency
+#define FT8_TXOFS 1250
 
 #define NSYM 79
 
@@ -892,31 +894,31 @@ void parse_commandline(
     // First see if it is a string.
     double parsed_freq;
     if (!strcasecmp(argv[optind],"160m")) {
-      parsed_freq=1840000+1500;
+      parsed_freq=1840000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"80m")) {
-      parsed_freq=3573000+1500;
+      parsed_freq=3573000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"60m")) {
-      parsed_freq=5357000+1500;
+      parsed_freq=5357000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"40m")) {
-      parsed_freq=7074000+1500;
+      parsed_freq=7074000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"30m")) {
-      parsed_freq=10136000+1500;
+      parsed_freq=10136000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"20m")) {
-      parsed_freq=14074000+1500;
+      parsed_freq=14074000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"17m")) {
-      parsed_freq=18100000+1500;
+      parsed_freq=18100000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"15m")) {
-      parsed_freq=21074000+1500;
+      parsed_freq=21074000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"12m")) {
-      parsed_freq=24915000+1500;
+      parsed_freq=24915000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"10m")) {
-      parsed_freq=28074000+1500;
+      parsed_freq=28074000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"6m")) {
-      parsed_freq=50313000+1500;
+      parsed_freq=50313000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"4m")) {
-      parsed_freq=70100000+1500;
+      parsed_freq=70100000+FT8_TXOFS;
     } else if (!strcasecmp(argv[optind],"2m")) {
-      parsed_freq=144174000+1500;
+      parsed_freq=144174000+FT8_TXOFS;
     } else {
       // Not a string. See if it can be parsed as a double.
       char * endp;
