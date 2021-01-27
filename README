@@ -181,7 +181,7 @@ Example usage:
 
   Call CQ for callsign N9NNN at grid square EM10 on the 20m band with a
   random frequency offset:
-    sudo ./ft8 20m CQ N9NNN EM10 -o
+    sudo ./ft8 -o 20m CQ N9NNN EM10
 
   Reply to N9NNN with callsign Z3ZZ and signal report: (escape leading "-")
     sudo ./ft8 20m -- N9NNN Z3ZZ -12
