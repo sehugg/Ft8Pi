@@ -33,9 +33,11 @@ Usage: (ft8 --help output):
   https://github.com/JamesP6000/WsprryPi/issues/10
 
   Usage:
-    wspr [options] freq message
+    ft8 [options] freq message
+    ft8 [options] freq -- message
+    ft8 [options] freq "message"
       OR
-    wspr [options] --test-tone freq
+    ft8 [options] --test-tone freq
 
   Options:
     -h --help
@@ -179,12 +181,12 @@ Example usage:
 
   Call CQ for callsign N9NNN at grid square EM10 on the 20m band with a
   random frequency offset:
-    sudo ./wspr 20m CQ N9NNN EM10 -o
+    sudo ./ft8 20m CQ N9NNN EM10 -o
 
   Reply to N9NNN with callsign Z3ZZ and signal report: (escape leading "-")
-    sudo ./wspr 20m -- N9NNN Z3ZZ -12
+    sudo ./ft8 20m -- N9NNN Z3ZZ -12
       OR
-    sudo ./wspr 20m "N9NNN Z3ZZ -12"
+    sudo ./ft8 20m "N9NNN Z3ZZ -12"
 
 ******
 Reference documentation:
