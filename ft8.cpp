@@ -766,7 +766,7 @@ void print_usage() {
   std::cout << "Frequencies can be specified either as an absolute TX carrier frequency, or" << std::endl;
   std::cout << "using one of the following strings. If a string is used, the transmission" << std::endl;
   std::cout << "will happen in the middle of the FT8 region of the selected band." << std::endl;
-  std::cout << "  LF LF-15 MF MF-15 160m 160m-15 80m 60m 40m 30m 20m 17m 15m 12m 10m 6m 4m 2m" << std::endl;
+  std::cout << "  160m 80m 60m 40m 30m 20m 17m 15m 12m 10m 6m 4m 2m" << std::endl;
   std::cout << "<B>-15 indicates the FT8-15 region of band <B>." << std::endl;
   std::cout << std::endl;
   std::cout << "Transmission gaps can be created by specifying a TX frequency of 0" << std::endl;
@@ -893,42 +893,32 @@ void parse_commandline(
     // Must be a frequency
     // First see if it is a string.
     double parsed_freq;
-    if (!strcasecmp(argv[optind],"LF")) {
-      parsed_freq=137500.0;
-    } else if (!strcasecmp(argv[optind],"LF-15")) {
-      parsed_freq=137612.5;
-    } else if (!strcasecmp(argv[optind],"MF")) {
-      parsed_freq=475700.0;
-    } else if (!strcasecmp(argv[optind],"MF-15")) {
-      parsed_freq=475812.5;
-    } else if (!strcasecmp(argv[optind],"160m")) {
-      parsed_freq=1838100.0;
-    } else if (!strcasecmp(argv[optind],"160m-15")) {
-      parsed_freq=1838212.5;
+    if (!strcasecmp(argv[optind],"160m")) {
+      parsed_freq=1840000+1500;
     } else if (!strcasecmp(argv[optind],"80m")) {
-      parsed_freq=3594100.0;
+      parsed_freq=3573000+1500;
     } else if (!strcasecmp(argv[optind],"60m")) {
-      parsed_freq=5288700.0;
+      parsed_freq=5357000+1500;
     } else if (!strcasecmp(argv[optind],"40m")) {
-      parsed_freq=7040100.0;
+      parsed_freq=7074000+1500;
     } else if (!strcasecmp(argv[optind],"30m")) {
-      parsed_freq=10140200.0;
+      parsed_freq=10136000+1500;
     } else if (!strcasecmp(argv[optind],"20m")) {
-      parsed_freq=14097100.0;
+      parsed_freq=14074000+1500;
     } else if (!strcasecmp(argv[optind],"17m")) {
-      parsed_freq=18106100.0;
+      parsed_freq=18100000+1500;
     } else if (!strcasecmp(argv[optind],"15m")) {
-      parsed_freq=21096100.0;
+      parsed_freq=21074000+1500;
     } else if (!strcasecmp(argv[optind],"12m")) {
-      parsed_freq=24926100.0;
+      parsed_freq=24915000+1500;
     } else if (!strcasecmp(argv[optind],"10m")) {
-      parsed_freq=28126100.0;
+      parsed_freq=28074000+1500;
     } else if (!strcasecmp(argv[optind],"6m")) {
-      parsed_freq=50294500.0;
+      parsed_freq=50313000+1500;
     } else if (!strcasecmp(argv[optind],"4m")) {
-      parsed_freq=70092500.0;
+      parsed_freq=70100000+1500;
     } else if (!strcasecmp(argv[optind],"2m")) {
-      parsed_freq=144490500.0;
+      parsed_freq=144174000+1500;
     } else {
       // Not a string. See if it can be parsed as a double.
       char * endp;
