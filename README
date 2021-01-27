@@ -33,9 +33,9 @@ Usage: (ft8 --help output):
   https://github.com/JamesP6000/WsprryPi/issues/10
 
   Usage:
-    wspr [options] message f1 <f2> <f3> ...
+    wspr [options] freq message
       OR
-    wspr [options] --test-tone f
+    wspr [options] --test-tone freq
 
   Options:
     -h --help
@@ -178,10 +178,10 @@ Example usage:
     sudo ./ft8 --test-tone 780e3
 
   Call CQ for callsign N9NNN at grid square EM10 on the 20m band:
-    sudo ./wspr "CQ N9NNN EM10" 20m
+    sudo ./wspr 20m CQ N9NNN EM10
 
-  The same as above, but without NTP calibration:
-    sudo ./wspr --free-running "CQ N9NNN EM10" 20m
+  Reply to N9NNN with callsign Z3ZZ and signal report:
+    sudo ./wspr 20m N9NNN Z3ZZ -12
 
 ******
 Reference documentation:

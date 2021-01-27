@@ -133,7 +133,6 @@ extern "C" {
 // How much random frequency offset should be added to FT8 transmissions
 // if the --offset option has been turned on.
 #define FT8_RAND_OFFSET 80
-#define FT815_RAND_OFFSET 8
 
 #define NSYM 79
 
@@ -734,9 +733,9 @@ void wait_every_15_sec(
 
 void print_usage() {
   std::cout << "Usage:" << std::endl;
-  std::cout << "  ft8 [options] message f1 <f2> <f3> ..." << std::endl;
+  std::cout << "  ft8 [options] freq message" << std::endl;
   std::cout << "    OR" << std::endl;
-  std::cout << "  ft8 [options] --test-tone f" << std::endl;
+  std::cout << "  ft8 [options] --test-tone freq" << std::endl;
   std::cout << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  -h --help" << std::endl;
@@ -755,7 +754,6 @@ void print_usage() {
   std::cout << "  -o --offset" << std::endl;
   std::cout << "    Add a random frequency offset to each transmission:" << std::endl;
   std::cout << "      +/- " << FT8_RAND_OFFSET << " Hz for FT8" << std::endl;
-  std::cout << "      +/- " << FT815_RAND_OFFSET << " Hz for FT8-15" << std::endl;
   std::cout << "  -t --test-tone freq" << std::endl;
   std::cout << "    Simply output a test tone at the specified frequency. Only used" << std::endl;
   std::cout << "    for debugging and to verify calibration." << std::endl;
@@ -884,10 +882,10 @@ void parse_commandline(
   // Parse the non-option parameters
   unsigned int n_free_args=0;
   while (optind<argc) {
-    // Check for callsign, locator, tx_power
-    if (n_free_args==0) {
-      message=argv[optind++];
-      n_free_args++;
+    // Check for message
+    if (n_free_args>0) {
+      if (message.length() > 0) message += " ";
+      message += argv[optind++];
       continue;
     }
     // Must be a frequency
@@ -929,6 +927,7 @@ void parse_commandline(
       }
     }
     optind++;
+    n_free_args++;
     center_freq_set.push_back(parsed_freq);
   }
 
@@ -959,9 +958,8 @@ void parse_commandline(
 
   // Print a summary of the parsed options
   if (mode==FT8) {
-    std::cout << "FT8 packet contents:" << std::endl;
-    std::cout << "  Callsign: " << message << std::endl;
-    std::cout << "Requested TX frequencies:" << std::endl;
+    std::cout << "FT8 packet contents: '" << message << "'" << std::endl;
+    std::cout << "Requested TX frequencies: ";
     std::stringstream temp;
     for (unsigned int t=0;t<center_freq_set.size();t++) {
       temp << std::setprecision(6) << std::fixed;
