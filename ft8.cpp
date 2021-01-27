@@ -126,7 +126,7 @@ extern "C" {
 // 0.16s long. For some reason, despite the use of DMA, the load on the PI
 // affects the TX length of the symbols. However, the varying symbol length is
 // compensated for in the main loop.
-#define F_PWM_CLK_INIT (31156186.6125761*0.682/0.16) // TODO?
+#define F_PWM_CLK_INIT (31156186.6125761/0.682*0.16) // TODO?
 
 // FT8 nominal symbol time
 #define FT8_SYMTIME (1920.0/12000.0)
