@@ -56,7 +56,7 @@ Usage: (ft8 --help output):
       Terminate after n transmissions have been completed.
     -o --offset
       Add a random frequency offset to each transmission:
-        +/- 80 Hz
+        +/- 1000 Hz
     -t --test-tone freq
       Simply output a test tone at the specified frequency. Only used
       for debugging and to verify calibration.

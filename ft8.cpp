@@ -756,6 +756,8 @@ void print_usage() {
   std::cout << "  -o --offset" << std::endl;
   std::cout << "    Add a random frequency offset to each transmission:" << std::endl;
   std::cout << "      +/- " << FT8_RAND_OFFSET << " Hz for FT8" << std::endl;
+  std::cout << "  -a --add" << std::endl;
+  std::cout << "    Add a specific frequency offset to each transmission:" << std::endl;
   std::cout << "  -t --test-tone freq" << std::endl;
   std::cout << "    Simply output a test tone at the specified frequency. Only used" << std::endl;
   std::cout << "    for debugging and to verify calibration." << std::endl;
@@ -788,6 +790,7 @@ void parse_commandline(
   mode_type & mode,
   int & terminate
 ) {
+  double specific_freq = FT8_TXOFS;
   // Default values
   ppm=0;
   self_cal=true;
@@ -807,6 +810,7 @@ void parse_commandline(
     {"terminate",        required_argument, 0, 'x'},
     {"offset",           no_argument,       0, 'o'},
     {"test-tone",        required_argument, 0, 't'},
+    {"add", 	 	 required_argument, 0, 'a'},
     {"no-delay",         no_argument,       0, 'n'},
     {0, 0, 0, 0}
   };
@@ -814,7 +818,7 @@ void parse_commandline(
   while (true) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
-    int c = getopt_long (argc, argv, "hp:sfrx:ot:n",
+    int c = getopt_long (argc, argv, "hp:sfrx:ot:na:",
                      long_options, &option_index);
     if (c == -1)
       break;
@@ -861,6 +865,13 @@ void parse_commandline(
       case 'o':
         random_offset=true;
         break;
+      case 'a':
+        specific_freq=strtod(optarg,&endp);
+        if ((optarg==endp)||(*endp!='\0')) {
+          std::cerr << "Error: could not parse --add frequency" << std::endl;
+          ABORT(-1);
+        }
+        break;
       case 't':
         test_tone=strtod(optarg,&endp);
         mode=TONE;
@@ -894,31 +905,31 @@ void parse_commandline(
     // First see if it is a string.
     double parsed_freq;
     if (!strcasecmp(argv[optind],"160m")) {
-      parsed_freq=1840000+FT8_TXOFS;
+      parsed_freq=1840000;
     } else if (!strcasecmp(argv[optind],"80m")) {
-      parsed_freq=3573000+FT8_TXOFS;
+      parsed_freq=3573000;
     } else if (!strcasecmp(argv[optind],"60m")) {
-      parsed_freq=5357000+FT8_TXOFS;
+      parsed_freq=5357000;
     } else if (!strcasecmp(argv[optind],"40m")) {
-      parsed_freq=7074000+FT8_TXOFS;
+      parsed_freq=7074000;
     } else if (!strcasecmp(argv[optind],"30m")) {
-      parsed_freq=10136000+FT8_TXOFS;
+      parsed_freq=10136000;
     } else if (!strcasecmp(argv[optind],"20m")) {
-      parsed_freq=14074000+FT8_TXOFS;
+      parsed_freq=14074000;
     } else if (!strcasecmp(argv[optind],"17m")) {
-      parsed_freq=18100000+FT8_TXOFS;
+      parsed_freq=18100000;
     } else if (!strcasecmp(argv[optind],"15m")) {
-      parsed_freq=21074000+FT8_TXOFS;
+      parsed_freq=21074000;
     } else if (!strcasecmp(argv[optind],"12m")) {
-      parsed_freq=24915000+FT8_TXOFS;
+      parsed_freq=24915000;
     } else if (!strcasecmp(argv[optind],"10m")) {
-      parsed_freq=28074000+FT8_TXOFS;
+      parsed_freq=28074000;
     } else if (!strcasecmp(argv[optind],"6m")) {
-      parsed_freq=50313000+FT8_TXOFS;
+      parsed_freq=50313000;
     } else if (!strcasecmp(argv[optind],"4m")) {
-      parsed_freq=70100000+FT8_TXOFS;
+      parsed_freq=70100000;
     } else if (!strcasecmp(argv[optind],"2m")) {
-      parsed_freq=144174000+FT8_TXOFS;
+      parsed_freq=144174000;
     } else {
       // Not a string. See if it can be parsed as a double.
       char * endp;
@@ -930,7 +941,7 @@ void parse_commandline(
     }
     optind++;
     n_free_args++;
-    center_freq_set.push_back(parsed_freq);
+    center_freq_set.push_back(parsed_freq + specific_freq);
   }
 
   // Convert to uppercase
